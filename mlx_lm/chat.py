@@ -133,6 +133,8 @@ def main():
     prompt_cache = make_prompt_cache(model, args.max_kv_size)
     while True:
         query = input(">> " if rank == 0 else "")
+        if query.isspace():
+            continue
         if query == "q":
             break
         if query == "r":
