@@ -2,6 +2,8 @@
 
 import argparse
 
+import readline
+
 import mlx.core as mx
 
 from .generate import stream_generate
@@ -9,13 +11,14 @@ from .models.cache import make_prompt_cache
 from .sample_utils import make_sampler
 from .utils import load, sharded_load
 
-DEFAULT_TEMP = 0.0
-DEFAULT_TOP_P = 1.0
+DEFAULT_TEMP = 1.0
+DEFAULT_TOP_P = 0.95
 DEFAULT_XTC_PROBABILITY = 0.0
 DEFAULT_XTC_THRESHOLD = 0.0
 DEFAULT_SEED = 0
-DEFAULT_MAX_TOKENS = 256
-DEFAULT_MODEL = "mlx-community/Llama-3.2-3B-Instruct-4bit"
+DEFAULT_MAX_TOKENS = 32768
+DEFAULT_MODEL = "mlx-community/Qwen3.6-27B-4bit"
+THINKING = False
 
 
 def setup_arg_parser():
@@ -39,6 +42,9 @@ def setup_arg_parser():
     )
     parser.add_argument(
         "--temp", type=float, default=DEFAULT_TEMP, help="Sampling temperature"
+    )
+    parser.add_argument(
+        "--enable_thinking", type=bool, default=THINKING, help="Enabling thinking"
     )
     parser.add_argument(
         "--top-p", type=float, default=DEFAULT_TOP_P, help="Sampling top-p"
@@ -95,6 +101,7 @@ def main():
     rank = group.rank()
     pipeline_group = group if args.pipeline else None
     tensor_group = group if not args.pipeline else None
+    enable_thinking = args.enable_thinking
 
     def rprint(*args, **kwargs):
         if rank == 0:
@@ -141,6 +148,7 @@ def main():
         prompt = tokenizer.apply_chat_template(
             messages,
             add_generation_prompt=True,
+            enable_thinking = enable_thinking
         )
         for response in stream_generate(
             model,
